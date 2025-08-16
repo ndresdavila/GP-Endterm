@@ -1,5 +1,6 @@
 let webcam
 let snapshot
+let grayBrightImg   // grayscale image +20% brightness
 
 // cell's dimensions
 const cellW = 160
@@ -19,10 +20,16 @@ function draw(){
     // draws grid
     drawGridPlaceholders()
 
-    // show snapshot if already taken
+    // show snapshot in row 1 col 1
     if(snapshot){
-        image(snapshot, 0, 0, cellW, cellH) // row 1, column 1
+        image(snapshot, 0, 0, cellW, cellH)
     }
+
+    // show grayscale image + 20% brightness in row 1 col 2
+    if (grayBrightImg) {
+      image(grayBrightImg, cellW, 0, cellW, cellH)
+    }
+
     // show live webcam instead
     else {
         image(webcam, 0, 0, cellW, cellH)
@@ -66,12 +73,32 @@ function keyPressed() {
     snapshot = webcam.get()        // captures current image
     snapshot.resize(cellW, cellH)   // resizing to minimum resolution
     snapshot.loadPixels()          // loads pixels
-  }
-}
 
-// takes snapshot when clicking as well
-function mousePressed() {
-    snapshot = webcam.get()
-    snapshot.resize(160, 120)  // resizing to minimum resolution
-    snapshot.loadPixels()
+    // creates graysacle +20% brightness image
+    grayBrightImg = createImage(cellW, cellH)
+    grayBrightImg.loadPixels()
+
+    for (let y = 0; y < cellH; y++) {
+      for (let x = 0; x < cellW; x++) {
+        let idx = (y * cellW + x) * 4
+        let r = snapshot.pixels[idx]
+        let g = snapshot.pixels[idx+1]
+        let b = snapshot.pixels[idx+2]
+        let a = snapshot.pixels[idx+3]
+
+        // average grayscale
+        let avg = (r + g + b) / 3
+        // +20% brightness withour surpassing 255
+        avg = constrain(avg * 1.2, 0, 255)
+
+        // sets pixels to average grayscale
+        grayBrightImg.pixels[idx]   = avg
+        grayBrightImg.pixels[idx+1] = avg
+        grayBrightImg.pixels[idx+2] = avg
+        grayBrightImg.pixels[idx+3] = a
+      }
+    }
+
+    grayBrightImg.updatePixels()
+  }
 }
