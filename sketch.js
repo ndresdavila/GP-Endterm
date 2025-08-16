@@ -2,6 +2,9 @@ let webcam
 let snapshot
 let grayBrightImg   // grayscale image +20% brightness
 
+// channel images
+let redImg, greenImg, blueImg
+
 // cell's dimensions
 const cellW = 160
 const cellH = 120
@@ -29,6 +32,11 @@ function draw(){
     if (grayBrightImg) {
       image(grayBrightImg, cellW, 0, cellW, cellH)
     }
+
+    // show red, green and blue channels
+    if(redImg)   image(redImg, 0, cellH, cellW, cellH)
+    if(greenImg) image(greenImg, cellW, cellH, cellW, cellH)
+    if(blueImg)  image(blueImg, cellW*2, cellH, cellW, cellH)
 
     // show live webcam instead
     else {
@@ -100,5 +108,43 @@ function keyPressed() {
     }
 
     grayBrightImg.updatePixels()
+
+    // creates red, green and blue channel images
+    redImg   = createImage(cellW, cellH)
+    greenImg = createImage(cellW, cellH)
+    blueImg  = createImage(cellW, cellH)
+    redImg.loadPixels(); greenImg.loadPixels(); blueImg.loadPixels();
+
+    for(let y=0; y<cellH; y++){
+      for(let x=0; x<cellW; x++){
+        let idx = (y*cellW + x)*4
+        let r = snapshot.pixels[idx]
+        let g = snapshot.pixels[idx+1]
+        let b = snapshot.pixels[idx+2]
+        let a = snapshot.pixels[idx+3]
+
+        // red channel
+        redImg.pixels[idx]   = r
+        redImg.pixels[idx+1] = 0
+        redImg.pixels[idx+2] = 0
+        redImg.pixels[idx+3] = a
+
+        // green channel
+        greenImg.pixels[idx]   = 0
+        greenImg.pixels[idx+1] = g
+        greenImg.pixels[idx+2] = 0
+        greenImg.pixels[idx+3] = a
+
+        // blue channel
+        blueImg.pixels[idx]   = 0
+        blueImg.pixels[idx+1] = 0
+        blueImg.pixels[idx+2] = b
+        blueImg.pixels[idx+3] = a
+      }
+    }
+
+    redImg.updatePixels()
+    greenImg.updatePixels()
+    blueImg.updatePixels()
   }
 }
