@@ -16,12 +16,15 @@ let threshR, threshG, threshB
 // filter images
 let hsvImg, labImg;
 
+let thrHSVImg, thrLabImg
+
+let threshHSV, threshLAB
+
 // cell's dimensions
 const cellW = 160
 const cellH = 120
 
 function setup(){
-    createCanvas(640, 480)
     createCanvas(cellW * 3, cellH * 5); // 3 rows and 5 columns
     webcam = createCapture(VIDEO)
     webcam.size(640, 480)
@@ -39,6 +42,14 @@ function setup(){
     threshB = createSlider(0,255,128);
     threshB.size(cellW-20, 15);
     threshB.position(cellW*2 + 10, cellH*2 + cellH - 20);
+
+    threshHSV = createSlider(0, 255, 128);
+    threshHSV.size(cellW-20, 15);
+    threshHSV.position(cellW + 10, cellH*4 + cellH - 20);
+
+    threshLAB = createSlider(0, 255, 128);
+    threshLAB.size(cellW-20, 15);
+    threshLAB.position(cellW*2 + 10, cellH*4 + cellH - 20);
 }
 
 function draw(){
@@ -64,9 +75,14 @@ function draw(){
     if(blueImg)  image(thrBlueImg, cellW*2, cellH*2, cellW, cellH)
 
     if(snapshot) image(snapshot, 0, cellH*3, cellW, cellH);
-    if(hsvImg)   image(hsvImg, cellW, cellH*3, cellW, cellH); // col 2
-    if(labImg)   image(labImg, cellW*2, cellH*3, cellW, cellH); // col 3
+    if(hsvImg)   image(hsvImg, cellW, cellH*3, cellW, cellH);
+    if(labImg)   image(labImg, cellW*2, cellH*3, cellW, cellH);
 
+    if(thrHSVImg && thrLabImg){
+      applyThresholdCSImages();
+      image(thrHSVImg, cellW, cellH*4, cellW, cellH);
+      image(thrLabImg, cellW*2, cellH*4, cellW, cellH);  
+    }
 
     // show live webcam instead
     else {
@@ -81,9 +97,6 @@ function draw(){
 function drawGridPlaceholders() {
   textAlign(CENTER, CENTER)
   textSize(10)
-  fill(0)
-  noFill()
-  stroke(150)
 
   let labels = [
     ["Webcam image", "Grayscale + Brightness +20%", ""],
@@ -110,12 +123,13 @@ function drawGridPlaceholders() {
 // takes snapshot with spacebar and creates the different images
 function keyPressed() {
     if(key===' '){
-        takeSnapshot();
-        createGrayBright();
-        createRGBChannels();
-        createThresholdImages();
-        createHSVImage();
-        createLabImage();
+        takeSnapshot()
+        createGrayBright()
+        createRGBChannels()
+        createThresholdImages()
+        createHSVImage()
+        createLabImage()
+        createThresholdCSImages()
       }
 }
 
@@ -244,103 +258,158 @@ function applyThresholds(){
 
 // ref: Colour Space Conversions (PDF) - Page 15
 function createHSVImage() {
-  hsvImg = createImage(cellW, cellH);
-  hsvImg.loadPixels();
+  hsvImg = createImage(cellW, cellH)
+  hsvImg.loadPixels()
 
   for (let y = 0; y < cellH; y++) {
     for (let x = 0; x < cellW; x++) {
-      let idx = (y * cellW + x) * 4;
+      let idx = (y * cellW + x) * 4
 
       // normalized RGB values (0-1)
-      let r = snapshot.pixels[idx] / 255;
-      let g = snapshot.pixels[idx + 1] / 255;
-      let b = snapshot.pixels[idx + 2] / 255;
-      let a = snapshot.pixels[idx + 3];
+      let r = snapshot.pixels[idx] / 255
+      let g = snapshot.pixels[idx + 1] / 255
+      let b = snapshot.pixels[idx + 2] / 255
+      let a = snapshot.pixels[idx + 3]
 
       // max, min, delta
-      let max = Math.max(r, g, b);
-      let min = Math.min(r, g, b);
-      let delta = max - min;
+      let max = Math.max(r, g, b)
+      let min = Math.min(r, g, b)
+      let delta = max - min
 
       // value
-      let V = max;
+      let V = max
 
       // saturation
-      let S = max === 0 ? 0 : delta / max;
+      let S = max === 0 ? 0 : delta / max
 
       // R', G', B' (avoid division by zero)
-      let R0 = delta === 0 ? 0 : (max - r) / delta;
-      let G0 = delta === 0 ? 0 : (max - g) / delta;
-      let B0 = delta === 0 ? 0 : (max - b) / delta;
+      let R0 = delta === 0 ? 0 : (max - r) / delta
+      let G0 = delta === 0 ? 0 : (max - g) / delta
+      let B0 = delta === 0 ? 0 : (max - b) / delta
 
       // hue
       let H;
       if (S === 0) H = 0;
-      else if (r === max && g === min) H = 5 + B0;
-      else if (r === max && g !== min) H = 1 - G0;
-      else if (g === max && b === min) H = R0 + 1;
-      else if (g === max && b !== min) H = 3 - B0;
-      else if (r === max) H = 3 + G0;
-      else H = 5 - R0;
+      else if (r === max && g === min) H = 5 + B0
+      else if (r === max && g !== min) H = 1 - G0
+      else if (g === max && b === min) H = R0 + 1
+      else if (g === max && b !== min) H = 3 - B0
+      else if (r === max) H = 3 + G0
+      else H = 5 - R0
 
       // converts H to degrees (0-360)
-      H = (H * 60) % 360;
+      H = (H * 60) % 360
 
       // visualization
-      hsvImg.pixels[idx]     = H / 360 * 255;
-      hsvImg.pixels[idx + 1] = S * 255;
-      hsvImg.pixels[idx + 2] = V * 255;
-      hsvImg.pixels[idx + 3] = a;
+      hsvImg.pixels[idx]     = H / 360 * 255
+      hsvImg.pixels[idx + 1] = S * 255
+      hsvImg.pixels[idx + 2] = V * 255
+      hsvImg.pixels[idx + 3] = a
     }
   }
-  hsvImg.updatePixels();
+  hsvImg.updatePixels()
 }
 
 // ref: https://kaizoudou.com/from-rgb-to-lab-color-space/
 function createLabImage() {
-  labImg = createImage(cellW, cellH);
-  labImg.loadPixels();
+  labImg = createImage(cellW, cellH)
+  labImg.loadPixels()
 
   // reference white point for D65 illuminant
-  const Xn = 95.047;
-  const Yn = 100.000;
-  const Zn = 108.883;
+  const Xn = 95.047
+  const Yn = 100.000
+  const Zn = 108.883
 
   for (let y = 0; y < cellH; y++) {
     for (let x = 0; x < cellW; x++) {
-      let idx = (y * cellW + x) * 4;
+      let idx = (y * cellW + x) * 4
 
       // normalized RGB values (0-1)
-      let r = snapshot.pixels[idx] / 255;
-      let g = snapshot.pixels[idx + 1] / 255;
-      let b = snapshot.pixels[idx + 2] / 255;
-      let alpha = snapshot.pixels[idx + 3];
+      let r = snapshot.pixels[idx] / 255
+      let g = snapshot.pixels[idx + 1] / 255
+      let b = snapshot.pixels[idx + 2] / 255
+      let alpha = snapshot.pixels[idx + 3]
 
       // apply gamma correction
-      r = (r > 0.04045) ? pow((r + 0.055)/1.055, 2.4) : r / 12.92;
-      g = (g > 0.04045) ? pow((g + 0.055)/1.055, 2.4) : g / 12.92;
-      b = (b > 0.04045) ? pow((b + 0.055)/1.055, 2.4) : b / 12.92;
+      r = (r > 0.04045) ? pow((r + 0.055)/1.055, 2.4) : r / 12.92
+      g = (g > 0.04045) ? pow((g + 0.055)/1.055, 2.4) : g / 12.92
+      b = (b > 0.04045) ? pow((b + 0.055)/1.055, 2.4) : b / 12.92
 
       // convert to XYZ color space
-      let X = (r*0.4124 + g*0.3576 + b*0.1805) * 100;
-      let Y = (r*0.2126 + g*0.7152 + b*0.0722) * 100;
-      let Z = (r*0.0193 + g*0.1192 + b*0.9505) * 100;
+      let X = (r*0.4124 + g*0.3576 + b*0.1805) * 100
+      let Y = (r*0.2126 + g*0.7152 + b*0.0722) * 100
+      let Z = (r*0.0193 + g*0.1192 + b*0.9505) * 100
 
       // convert to LAB color space using f(t) function
       function f(t) {
-          return t > 0.008856 ? pow(t, 1/3) : (7.787 * t + 16/116);
+          return t > 0.008856 ? pow(t, 1/3) : (7.787 * t + 16/116)
       }
 
-      let L = (Y / Yn > 0.008856) ? 116 * pow(Y / Yn, 1/3) - 16 : 903.3 * (Y / Yn);
-      let aLab = 500 * (f(X / Xn) - f(Y / Yn));
-      let bLab = 200 * (f(Y / Yn) - f(Z / Zn));
+      let L = (Y / Yn > 0.008856) ? 116 * pow(Y / Yn, 1/3) - 16 : 903.3 * (Y / Yn)
+      let aLab = 500 * (f(X / Xn) - f(Y / Yn))
+      let bLab = 200 * (f(Y / Yn) - f(Z / Zn))
 
       // visualization
-      labImg.pixels[idx]     = constrain(L / 100 * 255, 0, 255);  // L*
-      labImg.pixels[idx + 1] = constrain(aLab + 128, 0, 255);     // a*
-      labImg.pixels[idx + 2] = constrain(bLab + 128, 0, 255);     // b*
-      labImg.pixels[idx + 3] = alpha;
+      labImg.pixels[idx]     = constrain(L / 100 * 255, 0, 255)  // L*
+      labImg.pixels[idx + 1] = constrain(aLab + 128, 0, 255)     // a*
+      labImg.pixels[idx + 2] = constrain(bLab + 128, 0, 255)     // b*
+      labImg.pixels[idx + 3] = alpha
     }
   }
-  labImg.updatePixels();
+
+  labImg.updatePixels()
+}
+
+function createThresholdCSImages() {
+    thrHSVImg = createImage(cellW, cellH)
+    thrLabImg = createImage(cellW, cellH)
+}
+
+function applyThresholdCSImages(){
+
+  thrHSVImg.loadPixels()
+  thrLabImg.loadPixels()
+
+  for (let y = 0; y < cellH; y++){
+    for (let x = 0; x < cellW; x++){
+      let idx = (y * cellW + x) * 4
+
+      // HSV threshold (V channel)
+      let v = hsvImg.pixels[idx + 2] // V channel
+      let a = hsvImg.pixels[idx + 3] // alpha (transparency value)
+
+      if(v > threshHSV.value()){
+        // keeps original colors
+        thrHSVImg.pixels[idx]   = hsvImg.pixels[idx]
+        thrHSVImg.pixels[idx+1] = hsvImg.pixels[idx+1]
+        thrHSVImg.pixels[idx+2] = hsvImg.pixels[idx+2]
+      } else {
+        // otherwise, turns them black
+        thrHSVImg.pixels[idx]   = 0
+        thrHSVImg.pixels[idx+1] = 0
+        thrHSVImg.pixels[idx+2] = 0
+      }
+      thrHSVImg.pixels[idx+3] = a
+
+      // LAB treshold
+      let l = labImg.pixels[idx]       // L* channel
+      let aLab = labImg.pixels[idx+3]  // a* channel
+
+      if(l > threshLAB.value()){
+        // keeps original colors
+        thrLabImg.pixels[idx]   = labImg.pixels[idx]
+        thrLabImg.pixels[idx+1] = labImg.pixels[idx+1]
+        thrLabImg.pixels[idx+2] = labImg.pixels[idx+2]
+      } else {
+        // otherwise, turns them black
+        thrLabImg.pixels[idx]   = 0
+        thrLabImg.pixels[idx+1] = 0
+        thrLabImg.pixels[idx+2] = 0
+      }
+      thrLabImg.pixels[idx+3] = aLab
+    }
+  }
+
+  thrHSVImg.updatePixels()
+  thrLabImg.updatePixels()
 }
