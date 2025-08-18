@@ -1,6 +1,10 @@
 let webcam
 let snapshot
 
+let detector
+let classifier = objectdetect.frontalface
+let faceImg
+
 // grayscale image +20% brightness
 let grayBrightImg
 
@@ -30,26 +34,30 @@ function setup(){
     webcam.size(640, 480)
     webcam.hide()
 
+    let scaleFactor = 1.2
+    detector = new objectdetect.detector(cellW, cellH, scaleFactor, classifier)
+    faceImg = createImage(cellW, cellH)
+
     // sliders
-    threshR = createSlider(0,255,128);
-    threshR.size(cellW-20, 15);
-    threshR.position(0 + 10, cellH*2 + cellH - 20);
+    threshR = createSlider(0,255,128)
+    threshR.size(cellW-20, 15)
+    threshR.position(0 + 10, cellH*2 + cellH - 20)
 
-    threshG = createSlider(0,255,128);
-    threshG.size(cellW-20, 15);
-    threshG.position(cellW + 10, cellH*2 + cellH - 20);
+    threshG = createSlider(0,255,128)
+    threshG.size(cellW-20, 15)
+    threshG.position(cellW + 10, cellH*2 + cellH - 20)
 
-    threshB = createSlider(0,255,128);
-    threshB.size(cellW-20, 15);
-    threshB.position(cellW*2 + 10, cellH*2 + cellH - 20);
+    threshB = createSlider(0,255,128)
+    threshB.size(cellW-20, 15)
+    threshB.position(cellW*2 + 10, cellH*2 + cellH - 20)
 
-    threshHSV = createSlider(0, 255, 128);
-    threshHSV.size(cellW-20, 15);
-    threshHSV.position(cellW + 10, cellH*4 + cellH - 20);
+    threshHSV = createSlider(0, 255, 128)
+    threshHSV.size(cellW-20, 15)
+    threshHSV.position(cellW + 10, cellH*4 + cellH - 20)
 
-    threshLAB = createSlider(0, 255, 128);
-    threshLAB.size(cellW-20, 15);
-    threshLAB.position(cellW*2 + 10, cellH*4 + cellH - 20);
+    threshLAB = createSlider(0, 255, 128)
+    threshLAB.size(cellW-20, 15)
+    threshLAB.position(cellW*2 + 10, cellH*4 + cellH - 20)
 }
 
 function draw(){
@@ -58,8 +66,9 @@ function draw(){
     // draws grid
     drawGridPlaceholders()
 
-    // show snapshot in row 1 col 1
+    // show snapshot/webcam in row 1 col 1
     if(snapshot) image(snapshot, 0, 0, cellW, cellH)
+    else image(webcam, 0, 0, cellW, cellH)
 
     // show grayscale image + 20% brightness in row 1 col 2
     if (grayBrightImg) image(grayBrightImg, cellW, 0, cellW, cellH)
@@ -74,21 +83,17 @@ function draw(){
     if(greenImg) image(thrGreenImg, cellW, cellH*2, cellW, cellH)
     if(blueImg)  image(thrBlueImg, cellW*2, cellH*2, cellW, cellH)
 
-    if(snapshot) image(snapshot, 0, cellH*3, cellW, cellH);
-    if(hsvImg)   image(hsvImg, cellW, cellH*3, cellW, cellH);
-    if(labImg)   image(labImg, cellW*2, cellH*3, cellW, cellH);
+    if(snapshot) image(snapshot, 0, cellH*3, cellW, cellH)
+    if(hsvImg)   image(hsvImg, cellW, cellH*3, cellW, cellH)
+    if(labImg)   image(labImg, cellW*2, cellH*3, cellW, cellH)
 
     if(thrHSVImg && thrLabImg){
-      applyThresholdCSImages();
-      image(thrHSVImg, cellW, cellH*4, cellW, cellH);
-      image(thrLabImg, cellW*2, cellH*4, cellW, cellH);  
+      applyThresholdCSImages()
+      image(thrHSVImg, cellW, cellH*4, cellW, cellH)
+      image(thrLabImg, cellW*2, cellH*4, cellW, cellH)
     }
 
-    // show live webcam instead
-    else {
-        image(webcam, 0, 0, cellW, cellH)
-        text("Click or press SPACE to take a snapshot", 10, height-20)
-    }
+    if(webcam) createFaceDetection()
   
   if(redImg) applyThresholds()
 }
@@ -412,4 +417,28 @@ function applyThresholdCSImages(){
 
   thrHSVImg.updatePixels()
   thrLabImg.updatePixels()
+}
+
+function createFaceDetection() {
+  if(webcam){
+
+    // copies webcam frame to faceImg and loads its pixels
+    faceImg.copy(webcam, 0, 0, webcam.width, webcam.height, 0, 0, cellW, cellH)
+    faceImg.loadPixels()
+
+    // applies face detection on the frame
+    faces = detector.detect(faceImg.canvas)
+
+    // draws the resized webcam frame in its cell
+    image(faceImg, 0, cellH*4, cellW, cellH)
+  
+    stroke(255, 255, 255)
+    strokeWeight(2)
+    noFill()
+    for(let i=0; i<faces.length; i++){
+      let face = faces[i]
+      // draws rectangle around detected face if confidence > threshold
+      if(face[4] > 4) rect(face[0], face[1] + cellH*4, face[2], face[3])
+    }
+  }
 }
