@@ -19,82 +19,82 @@ let threshR, threshG, threshB
 
 // filter images
 let hsvImg, labImg;
-
 let thrHSVImg, thrLabImg
-
 let threshHSV, threshLAB
+
+let faceMode = 0
 
 // cell's dimensions
 const cellW = 160
 const cellH = 120
 
 function setup(){
-    createCanvas(cellW * 3, cellH * 5); // 3 rows and 5 columns
-    webcam = createCapture(VIDEO)
-    webcam.size(640, 480)
-    webcam.hide()
+  createCanvas(cellW * 3, cellH * 5); // 3 rows and 5 columns
+  pixelDensity(1);
+  webcam = createCapture(VIDEO)
+  webcam.size(640, 480)
+  webcam.hide()
 
-    let scaleFactor = 1.2
-    detector = new objectdetect.detector(cellW, cellH, scaleFactor, classifier)
-    faceImg = createImage(cellW, cellH)
+  let scaleFactor = 1.2
+  detector = new objectdetect.detector(cellW, cellH, scaleFactor, classifier)
+  faceImg = createImage(cellW, cellH)
 
-    // sliders
-    threshR = createSlider(0,255,128)
-    threshR.size(cellW-20, 15)
-    threshR.position(0 + 10, cellH*2 + cellH - 20)
+  // sliders
+  threshR = createSlider(0,255,128)
+  threshR.size(cellW-20, 15)
+  threshR.position(0 + 10, cellH*2 + cellH - 20)
 
-    threshG = createSlider(0,255,128)
-    threshG.size(cellW-20, 15)
-    threshG.position(cellW + 10, cellH*2 + cellH - 20)
+  threshG = createSlider(0,255,128)
+  threshG.size(cellW-20, 15)
+  threshG.position(cellW + 10, cellH*2 + cellH - 20)
 
-    threshB = createSlider(0,255,128)
-    threshB.size(cellW-20, 15)
-    threshB.position(cellW*2 + 10, cellH*2 + cellH - 20)
+  threshB = createSlider(0,255,128)
+  threshB.size(cellW-20, 15)
+  threshB.position(cellW*2 + 10, cellH*2 + cellH - 20)
 
-    threshHSV = createSlider(0, 255, 128)
-    threshHSV.size(cellW-20, 15)
-    threshHSV.position(cellW + 10, cellH*4 + cellH - 20)
+  threshHSV = createSlider(0, 255, 128)
+  threshHSV.size(cellW-20, 15)
+  threshHSV.position(cellW + 10, cellH*4 + cellH - 20)
 
-    threshLAB = createSlider(0, 255, 128)
-    threshLAB.size(cellW-20, 15)
-    threshLAB.position(cellW*2 + 10, cellH*4 + cellH - 20)
+  threshLAB = createSlider(0, 255, 128)
+  threshLAB.size(cellW-20, 15)
+  threshLAB.position(cellW*2 + 10, cellH*4 + cellH - 20)
 }
 
 function draw(){
-    background(220)
+  background(220)
 
-    // draws grid
-    drawGridPlaceholders()
+  // draws grid
+  drawGridPlaceholders()
 
-    // show snapshot/webcam in row 1 col 1
-    if(snapshot) image(snapshot, 0, 0, cellW, cellH)
-    else image(webcam, 0, 0, cellW, cellH)
+  // show snapshot/webcam in row 1 col 1
+  if(snapshot) image(snapshot, 0, 0, cellW, cellH)
+  else image(webcam, 0, 0, cellW, cellH)
 
-    // show grayscale image + 20% brightness in row 1 col 2
-    if (grayBrightImg) image(grayBrightImg, cellW, 0, cellW, cellH)
+  // show grayscale image + 20% brightness in row 1 col 2
+  if (grayBrightImg) image(grayBrightImg, cellW, 0, cellW, cellH)
 
-    // show red, green and blue channels
-    if(redImg)   image(redImg, 0, cellH, cellW, cellH)
-    if(greenImg) image(greenImg, cellW, cellH, cellW, cellH)
-    if(blueImg)  image(blueImg, cellW*2, cellH, cellW, cellH)
+  // show red, green and blue channels
+  if(redImg)   image(redImg, 0, cellH, cellW, cellH)
+  if(greenImg) image(greenImg, cellW, cellH, cellW, cellH)
+  if(blueImg)  image(blueImg, cellW*2, cellH, cellW, cellH)
 
-    // show threshold images
-    if(redImg)   image(thrRedImg, 0, cellH*2, cellW, cellH)
-    if(greenImg) image(thrGreenImg, cellW, cellH*2, cellW, cellH)
-    if(blueImg)  image(thrBlueImg, cellW*2, cellH*2, cellW, cellH)
+  // show threshold images
+  if(redImg)   image(thrRedImg, 0, cellH*2, cellW, cellH)
+  if(greenImg) image(thrGreenImg, cellW, cellH*2, cellW, cellH)
+  if(blueImg)  image(thrBlueImg, cellW*2, cellH*2, cellW, cellH)
 
-    if(snapshot) image(snapshot, 0, cellH*3, cellW, cellH)
-    if(hsvImg)   image(hsvImg, cellW, cellH*3, cellW, cellH)
-    if(labImg)   image(labImg, cellW*2, cellH*3, cellW, cellH)
+  if(snapshot) image(snapshot, 0, cellH*3, cellW, cellH)
+  if(hsvImg)   image(hsvImg, cellW, cellH*3, cellW, cellH)
+  if(labImg)   image(labImg, cellW*2, cellH*3, cellW, cellH)
 
-    if(thrHSVImg && thrLabImg){
-      applyThresholdCSImages()
-      image(thrHSVImg, cellW, cellH*4, cellW, cellH)
-      image(thrLabImg, cellW*2, cellH*4, cellW, cellH)
-    }
+  if(thrHSVImg && thrLabImg){
+    applyThresholdCSImages()
+    image(thrHSVImg, cellW, cellH*4, cellW, cellH)
+    image(thrLabImg, cellW*2, cellH*4, cellW, cellH)
+  }
 
-    if(webcam) createFaceDetection()
-  
+  if(webcam) createFaceDetection()
   if(redImg) applyThresholds()
 }
 
@@ -127,50 +127,62 @@ function drawGridPlaceholders() {
 
 // takes snapshot with spacebar and creates the different images
 function keyPressed() {
-    if(key===' '){
-        takeSnapshot()
-        createGrayBright()
-        createRGBChannels()
-        createThresholdImages()
-        createHSVImage()
-        createLabImage()
-        createThresholdCSImages()
-      }
+  if(key===' '){
+    takeSnapshot()
+    createGrayBright()
+    createRGBChannels()
+    createThresholdImages()
+    createHSVImage()
+    createLabImage()
+    createThresholdCSImages()
+  }
+  if (key === '0') faceMode = 0
+  if (key === '1') faceMode = 1
+  if (key === '2') faceMode = 2
+  if (key === '3') faceMode = 3
+  if (key === '4') faceMode = 4
+  if (key === '5') faceMode = 5
 }
 
 function takeSnapshot() {
-    snapshot = webcam.get()         // captures current image
-    snapshot.resize(cellW, cellH)   // resizing to minimum resolution
-    snapshot.loadPixels()           // loads pixels
+
+  // captures current image
+  snapshot = webcam.get()
+
+  // resizing to minimum resolution
+  snapshot.resize(cellW, cellH)
+
+  // loads pixels
+  snapshot.loadPixels()
 }
 
 function createGrayBright() {
-      // creates graysacle +20% brightness image
-    grayBrightImg = createImage(cellW, cellH)
-    grayBrightImg.loadPixels()
+  // creates graysacle +20% brightness image
+  grayBrightImg = createImage(cellW, cellH)
+  grayBrightImg.loadPixels()
 
-    for (let y = 0; y < cellH; y++) {
-      for (let x = 0; x < cellW; x++) {
-        let idx = (y * cellW + x) * 4
-        let r = snapshot.pixels[idx]
-        let g = snapshot.pixels[idx+1]
-        let b = snapshot.pixels[idx+2]
-        let a = snapshot.pixels[idx+3]
+  for (let y = 0; y < cellH; y++) {
+    for (let x = 0; x < cellW; x++) {
+      let idx = (y * cellW + x) * 4
+      let r = snapshot.pixels[idx]
+      let g = snapshot.pixels[idx+1]
+      let b = snapshot.pixels[idx+2]
+      let a = snapshot.pixels[idx+3]
 
-        // average grayscale
-        let avg = (r + g + b) / 3
-        // +20% brightness withour surpassing 255
-        avg = constrain(avg * 1.2, 0, 255)
+      // average grayscale
+      let avg = (r + g + b) / 3
+      // +20% brightness withour surpassing 255
+      avg = constrain(avg * 1.2, 0, 255)
 
-        // sets pixels to average grayscale
-        grayBrightImg.pixels[idx]   = avg
-        grayBrightImg.pixels[idx+1] = avg
-        grayBrightImg.pixels[idx+2] = avg
-        grayBrightImg.pixels[idx+3] = a
-      }
+      // sets pixels to average grayscale
+      grayBrightImg.pixels[idx]   = avg
+      grayBrightImg.pixels[idx+1] = avg
+      grayBrightImg.pixels[idx+2] = avg
+      grayBrightImg.pixels[idx+3] = a
     }
+  }
 
-    grayBrightImg.updatePixels()
+  grayBrightImg.updatePixels()
 }
 
 function createRGBChannels() {
@@ -217,9 +229,9 @@ function createRGBChannels() {
 }
 
 function createThresholdImages() {
-    thrRedImg = createImage(cellW, cellH);
-    thrGreenImg = createImage(cellW, cellH);
-    thrBlueImg = createImage(cellW, cellH);
+  thrRedImg = createImage(cellW, cellH);
+  thrGreenImg = createImage(cellW, cellH);
+  thrBlueImg = createImage(cellW, cellH);
 }
 
 function applyThresholds(){
@@ -421,7 +433,6 @@ function applyThresholdCSImages(){
 
 function createFaceDetection() {
   if(webcam){
-
     // copies webcam frame to faceImg and loads its pixels
     faceImg.copy(webcam, 0, 0, webcam.width, webcam.height, 0, 0, cellW, cellH)
     faceImg.loadPixels()
@@ -436,9 +447,201 @@ function createFaceDetection() {
     strokeWeight(2)
     noFill()
     for(let i=0; i<faces.length; i++){
-      let face = faces[i]
+      let face = faces[i]      
       // draws rectangle around detected face if confidence > threshold
-      if(face[4] > 4) rect(face[0], face[1] + cellH*4, face[2], face[3])
+      if(face[4] > 4) {
+        rect(face[0], face[1] + cellH*4, face[2], face[3])
+
+        // face crop image section
+        let faceCrop = faceImg.get(face[0], face[1], face[2], face[3])
+
+        // 4 modes of face detection
+        if (faceMode === 1) applyGrayBrightness(faceCrop)
+        else if (faceMode === 2) applyBlur(faceCrop)
+        else if (faceMode === 3) applyHSV(faceCrop)
+        else if (faceMode === 4) applyPixelate(faceCrop, 5, false)
+        else if (faceMode === 5) applyPixelate(faceCrop, 5, true)
+
+        image(faceCrop, face[0], face[1] + cellH * 4)
+      }
     }
   }
+}
+
+function applyGrayBrightness(img) {
+  img.loadPixels()
+  // runs through the array in one single loop following the 4-value-pixel rule (and skipping alpha)
+  for (let i = 0; i < img.pixels.length; i += 4) {
+    let r = img.pixels[i]
+    let g = img.pixels[i + 1]
+    let b = img.pixels[i + 2]
+    
+    // average grayscale
+    let gray = (r + g + b) / 3
+
+    // sets pixels to average grayscale
+    img.pixels[i] = gray
+    img.pixels[i + 1] = gray
+    img.pixels[i + 2] = gray
+  }
+  img.updatePixels()
+}
+
+function applyBlur(img) {
+
+  factor = 8
+  // creates a new image with dimensions reduced to 1/8 of the original size
+  let small = createImage(int(img.width / factor), int(img.height / factor))
+  
+  // copies the original image inside the reduced image
+  small.copy(img, 0, 0, img.width, img.height, 0, 0, small.width, small.height)
+  
+  // copies the reduced image back to the original image, making it look blurry
+  img.copy(small, 0, 0, small.width, small.height, 0, 0, img.width, img.height)
+}
+
+function applyPixelate(img, blockSize, isColor) {
+  img.loadPixels();
+
+  // define dimensions as integers
+  let width = Math.floor(img.width);
+  let height = Math.floor(img.height);
+
+  // iterate over each block (of size blockSize)
+  for (let y = 0; y < height; y += blockSize) {
+    for (let x = 0; x < width; x += blockSize) {
+
+      // variables that accumulate the value of each pixel in the current block
+      let sumR = 0, sumG = 0, sumB = 0;
+      let sumGray = 0;
+      let count = 0;
+
+      // iterates over each pixel inside the current block
+      for (let j = 0; j < blockSize; j++) {
+        for (let i = 0; i < blockSize; i++) {
+
+          // coordinates of the current pixel inside the image
+          let px = x + i;
+          let py = y + j;
+
+          // checks if current pixel (px, py) is inside the boundaries of the image
+          if (px < width && py < height) {
+
+            // calculate index of the pixel array to obtain the red, green and blue values
+            let idx = 4 * (py * width + px);
+            let r = img.pixels[idx];
+            let g = img.pixels[idx + 1];
+            let b = img.pixels[idx + 2];
+
+            if (r === undefined || g === undefined || b === undefined) continue;
+
+            // if isColor flag is set: accumulate values of each channel
+            if (isColor) {
+              sumR += r;
+              sumG += g;
+              sumB += b;
+            } else {
+              // otherwise convert to grayscale and accumulate that value
+              let gray = (r + g + b) / 3;
+              sumGray += gray;
+            }
+            count++;
+          }
+        }
+      }
+
+      // avoids division by zero in first iteration
+      if (count === 0) continue;
+
+      // calculate the average red, green and blue for each block
+      let avgR, avgG, avgB;
+      if (isColor) {
+        avgR = sumR / count;
+        avgG = sumG / count;
+        avgB = sumB / count;
+      } else {
+        // set all color channels to the average gray value
+        let gray = sumGray / count;
+        avgR = avgG = avgB = gray;
+      }
+
+      // paint the block with the average color
+      for (let j = 0; j < blockSize; j++) {
+        for (let i = 0; i < blockSize; i++) {
+          let px = x + i;
+          let py = y + j;
+          if (px < width && py < height) {
+            let idx = 4 * (py * width + px);
+            img.pixels[idx] = avgR;
+            img.pixels[idx + 1] = avgG;
+            img.pixels[idx + 2] = avgB;
+          }
+        }
+      }
+    }
+  }
+
+  img.updatePixels();
+}
+
+function applyHSV(img) {
+
+  // sets a maximal dimension of 100x100 to avoid image overprocesing
+  let maxDim = 100;
+  let scaleFactor = 1;
+  if (img.width > maxDim || img.height > maxDim) {
+    scaleFactor = Math.min(maxDim / img.width, maxDim / img.height);
+  }
+  let tempW = Math.floor(img.width * scaleFactor);
+  let tempH = Math.floor(img.height * scaleFactor);
+
+  // creates a scaled copy of the original image 
+  let tempImg = createImage(tempW, tempH);
+  tempImg.copy(img, 0, 0, img.width, img.height, 0, 0, tempW, tempH);
+  tempImg.loadPixels();
+
+  // iterates over each pixel
+  for (let y = 0; y < tempImg.height; y++) {
+    for (let x = 0; x < tempImg.width; x++) {
+
+      let idx = (y * tempImg.width + x) * 4;
+
+      // normalizes red, green and blue channel values
+      let r = tempImg.pixels[idx] / 255;
+      let g = tempImg.pixels[idx + 1] / 255;
+      let b = tempImg.pixels[idx + 2] / 255;
+
+      // calculates HSV values as in the previous function (TODO: refactor)
+      let max = Math.max(r, g, b);
+      let min = Math.min(r, g, b);
+      let delta = max - min;
+
+      let V = max;
+      let S = max === 0 ? 0 : delta / max;
+
+      let R0 = delta === 0 ? 0 : (max - r) / delta;
+      let G0 = delta === 0 ? 0 : (max - g) / delta;
+      let B0 = delta === 0 ? 0 : (max - b) / delta;
+
+      let H;
+      if (S === 0) H = 0;
+      else if (r === max && g === min) H = 5 + B0;
+      else if (r === max && g !== min) H = 1 - G0;
+      else if (g === max && b === min) H = R0 + 1;
+      else if (g === max && b !== min) H = 3 - B0;
+      else if (r === max) H = 3 + G0;
+      else H = 5 - R0;
+
+      H = (H * 60) % 360;
+
+      tempImg.pixels[idx]     = (H / 360) * 255;
+      tempImg.pixels[idx + 1] = S * 255;
+      tempImg.pixels[idx + 2] = V * 255;
+    }
+  }
+  // updates temporal image
+  tempImg.updatePixels();
+
+  // copies it back to the original image (scaling it)
+  img.copy(tempImg, 0, 0, tempImg.width, tempImg.height, 0, 0, img.width, img.height);
 }
