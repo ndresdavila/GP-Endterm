@@ -105,14 +105,29 @@ function draw(){
   if(webcam) createFaceDetection()
   if(redImg) applyThresholds()
 
-  // show VHS effect in row 1 col 3
+  // showS VHS effect in row 1, column 3
   if (webcam) {
-    vhsImg = webcam.get();         // tomar frame de la webcam
-    vhsImg.resize(cellW, cellH);   // redimensionar al tamaño de celda
-    vhsImg = applyVHSEffect(vhsImg); // aplicar efecto VHS
-    image(vhsImg, cellW*2, 0, cellW, cellH);
-  }
+    vhsImg = webcam.get();           // captureS current frame from the webcam
+    vhsImg.resize(cellW, cellH);     // resizeS to cell dimensions
+    vhsImg = applyVHSEffect(vhsImg); // applies VHS effect
+    image(vhsImg, cellW*2, 0, cellW, cellH);  
 
+    // drawS the date in the top-right corner
+    push();
+    textFont(vhsFont);     // set VHS-style font
+    textSize(12);          // set font size
+    fill(255, 255, 255);   // white text
+    stroke(0);             // black stroke for contrast
+    strokeWeight(1);       // stroke thickness
+    textAlign(RIGHT, TOP); // align text to top-right corner
+
+    // create date string in format YYYY-MM-DD HH:MM:SS
+    let dateStr = nf(year(), 4) + '-' + nf(month(), 2) + '-' + nf(day(), 2) + ' ' + nf(hour(), 2) + ':' + nf(minute(), 2) + ':' + nf(second(), 2);
+
+    // draw text with 5px margin from edges
+    text(dateStr, cellW*3 - 5, 5);
+    pop();
+  }
 }
 
 // draws placeholders with their title
