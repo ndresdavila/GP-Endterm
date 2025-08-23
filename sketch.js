@@ -24,9 +24,17 @@ let threshHSV, threshLAB
 
 let faceMode = 0
 
+let vhsImg
+let vhsFont;
+
 // cell's dimensions
 const cellW = 160
 const cellH = 120
+
+function preload() {
+  // vintage style font (VT323 from Google Fonts)
+  vhsFont = loadFont("https://fonts.gstatic.com/s/vt323/v17/pxiKyp0ihIEF2isfFJA.ttf");
+}
 
 function setup(){
   createCanvas(cellW * 3, cellH * 5); // 3 rows and 5 columns
@@ -96,6 +104,15 @@ function draw(){
 
   if(webcam) createFaceDetection()
   if(redImg) applyThresholds()
+
+  // show VHS effect in row 1 col 3
+  if (webcam) {
+    vhsImg = webcam.get();         // tomar frame de la webcam
+    vhsImg.resize(cellW, cellH);   // redimensionar al tamaño de celda
+    vhsImg = applyVHSEffect(vhsImg); // aplicar efecto VHS
+    image(vhsImg, cellW*2, 0, cellW, cellH);
+  }
+
 }
 
 // draws placeholders with their title
@@ -104,7 +121,7 @@ function drawGridPlaceholders() {
   textSize(10)
 
   let labels = [
-    ["Webcam image", "Grayscale + Brightness +20%", ""],
+    ["Webcam image", "Grayscale + Brightness +20%", "VHS Effect"],
     ["Red channel", "Green channel", "Blue channel"],
     ["Threshold R", "Threshold G", "Threshold B"],
     ["Webcam (repeat)", "HSV", "L*a*b*"],
@@ -644,4 +661,104 @@ function applyHSV(img) {
 
   // copies it back to the original image (scaling it)
   img.copy(tempImg, 0, 0, tempImg.width, tempImg.height, 0, 0, img.width, img.height);
+}
+
+function applyVHSEffect(img) {
+  img.loadPixels();
+
+  // converts from RGB to HSV
+  for (let y = 0; y < img.height; y++) {
+    for (let x = 0; x < img.width; x++) {
+      let idx = (y * img.width + x) * 4;
+
+      let r = img.pixels[idx] / 255;
+      let g = img.pixels[idx + 1] / 255;
+      let b = img.pixels[idx + 2] / 255;
+
+      let max = Math.max(r, g, b);
+      let min = Math.min(r, g, b);
+      let delta = max - min;
+
+      let H = 0;
+      if (delta !== 0) {
+        if (max === r) H = ((g - b) / delta) % 6;
+        else if (max === g) H = (b - r) / delta + 2;
+        else H = (r - g) / delta + 4;
+        H *= 60;
+        if (H < 0) H += 360;
+      }
+
+      let S = max === 0 ? 0 : delta / max;
+      let V = max;
+
+      // VHS adjustments (TODO: avoid magic numbers)
+      H += random([-3, 3]);     // small displacement of hue
+      S *= 0.75;                // reduced saturation
+      V *= random(0.90, 1.10);  // random brightness variation
+
+      // from HSV to RGB for visualization
+      let C = V * S;
+      let X = C * (1 - abs((H / 60) % 2 - 1)); 
+      let m = V - C;
+
+      let r1, g1, b1;
+      if (H < 60) [r1, g1, b1] = [C, X, 0];
+      else if (H < 120) [r1, g1, b1] = [X, C, 0];
+      else if (H < 180) [r1, g1, b1] = [0, C, X];
+      else if (H < 240) [r1, g1, b1] = [0, X, C];
+      else if (H < 300) [r1, g1, b1] = [X, 0, C];
+      else [r1, g1, b1] = [C, 0, X];
+
+      r = (r1 + m) * 255;
+      g = (g1 + m) * 255;
+      b = (b1 + m) * 255;
+
+      // adds random noise to pixels (TODO: avoid magic numbers)
+      let noiseAmt = random(-15, 15);
+      r = constrain(r + noiseAmt, 0, 255);
+      g = constrain(g + noiseAmt, 0, 255);
+      b = constrain(b + noiseAmt, 0, 255);
+
+      img.pixels[idx]     = r;
+      img.pixels[idx + 1] = g;
+      img.pixels[idx + 2] = b;
+    }
+  }
+  img.updatePixels();
+
+  // chromatic shift
+  let shifted = createImage(img.width, img.height);
+  shifted.copy(img, 0, 0, img.width, img.height, 0, 0, img.width, img.height);
+  shifted.loadPixels();
+
+  for (let y = 0; y < img.height; y++) {
+    for (let x = 0; x < img.width; x++) {
+      let idx = (y * img.width + x) * 4;
+      let shift = 2;
+
+      let xR = constrain(x + shift, 0, img.width - 1);
+      let idxR = (y * img.width + xR) * 4;
+
+      let xB = constrain(x - shift, 0, img.width - 1);
+      let idxB = (y * img.width + xB) * 4;
+
+      shifted.pixels[idx]     = img.pixels[idxR];
+      shifted.pixels[idx + 1] = img.pixels[idx + 1];
+      shifted.pixels[idx + 2] = img.pixels[idxB + 2];
+    }
+  }
+  shifted.updatePixels();
+
+  // horizontal scanlines
+  shifted.loadPixels();
+  for (let y = 0; y < shifted.height; y += 2) {
+    for (let x = 0; x < shifted.width; x++) {
+      let idx = (y * shifted.width + x) * 4;
+      shifted.pixels[idx]     *= 0.7;
+      shifted.pixels[idx + 1] *= 0.7;
+      shifted.pixels[idx + 2] *= 0.7;
+    }
+  }
+  shifted.updatePixels();
+  return shifted;
 }
