@@ -713,7 +713,7 @@ function applyVHSEffect(img) {
 
       // from HSV to RGB for visualization
       let C = V * S;
-      let X = C * (1 - abs((H / 60) % 2 - 1)); 
+      let X = C * (1 - abs((H / 60) % 2 - 1));
       let m = V - C;
 
       let r1, g1, b1;
@@ -724,19 +724,13 @@ function applyVHSEffect(img) {
       else if (H < 300) [r1, g1, b1] = [X, 0, C];
       else [r1, g1, b1] = [C, 0, X];
 
-      r = (r1 + m) * 255;
-      g = (g1 + m) * 255;
-      b = (b1 + m) * 255;
+      r = (r1 + m) * 255 + random(-15, 15);
+      g = (g1 + m) * 255 + random(-15, 15);
+      b = (b1 + m) * 255 + random(-15, 15);
 
-      // adds random noise to pixels (TODO: avoid magic numbers)
-      let noiseAmt = random(-15, 15);
-      r = constrain(r + noiseAmt, 0, 255);
-      g = constrain(g + noiseAmt, 0, 255);
-      b = constrain(b + noiseAmt, 0, 255);
-
-      img.pixels[idx]     = r;
-      img.pixels[idx + 1] = g;
-      img.pixels[idx + 2] = b;
+      img.pixels[idx]     = constrain(r, 0, 255);
+      img.pixels[idx + 1] = constrain(g, 0, 255);
+      img.pixels[idx + 2] = constrain(b, 0, 255);
     }
   }
   img.updatePixels();
@@ -762,18 +756,35 @@ function applyVHSEffect(img) {
       shifted.pixels[idx + 2] = img.pixels[idxB + 2];
     }
   }
-  shifted.updatePixels();
 
-  // horizontal scanlines
-  shifted.loadPixels();
-  for (let y = 0; y < shifted.height; y += 2) {
-    for (let x = 0; x < shifted.width; x++) {
-      let idx = (y * shifted.width + x) * 4;
-      shifted.pixels[idx]     *= 0.7;
-      shifted.pixels[idx + 1] *= 0.7;
-      shifted.pixels[idx + 2] *= 0.7;
+  // scanlines and white noise for VHS effect
+  for (let y = 0; y < shifted.height; y++) {
+    // horizonttal lines
+    if (y % 2 === 0) {
+      for (let x = 0; x < shifted.width; x++) {
+        let idx = (y * shifted.width + x) * 4;
+        shifted.pixels[idx]     *= 0.7;
+        shifted.pixels[idx + 1] *= 0.7;
+        shifted.pixels[idx + 2] *= 0.7;
+      }
+    }
+
+    // small random white noise bands
+    if (random() < 0.01) {
+      let bandHeight = int(random(1, 3));
+      for (let by = 0; by < bandHeight; by++) {
+        let yy = constrain(y + by, 0, shifted.height - 1);
+        for (let x = 0; x < shifted.width; x++) {
+          let idx = (yy * shifted.width + x) * 4;
+          let whiteNoise = random(150, 255);
+          shifted.pixels[idx]     = whiteNoise;
+          shifted.pixels[idx + 1] = whiteNoise;
+          shifted.pixels[idx + 2] = whiteNoise;
+        }
+      }
     }
   }
+
   shifted.updatePixels();
   return shifted;
 }
