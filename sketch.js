@@ -43,6 +43,7 @@ function setup(){
   webcam.size(640, 480)
   webcam.hide()
 
+  // face detector
   let scaleFactor = 1.2
   detector = new objectdetect.detector(cellW, cellH, scaleFactor, classifier)
   faceImg = createImage(cellW, cellH)
@@ -69,70 +70,63 @@ function setup(){
   threshLAB.position(cellW*2 + 10, cellH*4 + cellH - 20)
 }
 
-function draw(){
-  background(220)
+function draw() {
+  background(220);
 
-  // draws grid
-  drawGridPlaceholders()
+  // draws grid and placeholders
+  drawGridPlaceholders();
 
-  // show snapshot/webcam
-  if(snapshot) image(snapshot, 0, 0, cellW, cellH)
-  else image(webcam, 0, 0, cellW, cellH)
+  // displays snapshot or webcam image
+  displaySnapshotOrWebcam();
 
-  // show grayscale image + 20% brightness
-  if (grayBrightImg) image(grayBrightImg, cellW, 0, cellW, cellH)
+  // displays processed images
+  displayProcessedImages();
 
-  // show red, green and blue channel images
-  if(redImg)   image(redImg, 0, cellH, cellW, cellH)
-  if(greenImg) image(greenImg, cellW, cellH, cellW, cellH)
-  if(blueImg)  image(blueImg, cellW*2, cellH, cellW, cellH)
-  
-  // create/update threshold images if RGB channels are available
+  // draws face detection with selected effect
+  if (webcam) createFaceDetection();
+
+  // displays VHS effect
+  if (webcam) displayVHSEffect();
+}
+
+//////////////////////////////////////////////
+// // HELPER FUNCTIONS //
+//////////////////////////////////////////////
+function displaySnapshotOrWebcam() {
+  if(snapshot) image(snapshot, 0, 0, cellW, cellH);
+  else image(webcam, 0, 0, cellW, cellH);
+
+  if (grayBrightImg) image(grayBrightImg, cellW, 0, cellW, cellH);
+}
+
+function displayProcessedImages() {
+  // RGB channels
+  if(redImg)   image(redImg, 0, cellH, cellW, cellH);
+  if(greenImg) image(greenImg, cellW, cellH, cellW, cellH);
+  if(blueImg)  image(blueImg, cellW*2, cellH, cellW, cellH);
+
+  // Threshold channels
   if (redImg && greenImg && blueImg) {
     thrRedImg   = createChannelImage(snapshot, "r", threshR.value());
     thrGreenImg = createChannelImage(snapshot, "g", threshG.value());
     thrBlueImg  = createChannelImage(snapshot, "b", threshB.value());
   }
 
-  // show threshold images
-  if(thrRedImg)   image(thrRedImg, 0, cellH*2, cellW, cellH)
-  if(thrGreenImg) image(thrGreenImg, cellW, cellH*2, cellW, cellH)
-  if(thrBlueImg)  image(thrBlueImg, cellW*2, cellH*2, cellW, cellH)
+  // threshold images
+  if(thrRedImg)   image(thrRedImg, 0, cellH*2, cellW, cellH);
+  if(thrGreenImg) image(thrGreenImg, cellW, cellH*2, cellW, cellH);
+  if(thrBlueImg)  image(thrBlueImg, cellW*2, cellH*2, cellW, cellH);
 
-  if(snapshot) image(snapshot, 0, cellH*3, cellW, cellH)
-  if(hsvImg)   image(hsvImg, cellW, cellH*3, cellW, cellH)
-  if(labImg)   image(labImg, cellW*2, cellH*3, cellW, cellH)
+  // HSV / Lab
+  if(snapshot) image(snapshot, 0, cellH*3, cellW, cellH);
+  if(hsvImg)   image(hsvImg, cellW, cellH*3, cellW, cellH);
+  if(labImg)   image(labImg, cellW*2, cellH*3, cellW, cellH);
 
+  // Threshold HSV / Lab
   if(thrHSVImg && thrLabImg){
-    applyThresholdCSImages()
-    image(thrHSVImg, cellW, cellH*4, cellW, cellH)
-    image(thrLabImg, cellW*2, cellH*4, cellW, cellH)
-  }
-
-  if(webcam) createFaceDetection()
-
-  // showS VHS effect in row 1, column 3
-  if (webcam) {
-    vhsImg = webcam.get();           // captureS current frame from the webcam
-    vhsImg.resize(cellW, cellH);     // resizeS to cell dimensions
-    vhsImg = applyVHSEffect(vhsImg); // applies VHS effect
-    image(vhsImg, cellW*2, 0, cellW, cellH);  
-
-    // drawS the date in the top-right corner
-    push();
-    textFont(vhsFont);     // set VHS-style font
-    textSize(12);          // set font size
-    fill(255, 255, 255);   // white text
-    stroke(0);             // black stroke for contrast
-    strokeWeight(1);       // stroke thickness
-    textAlign(RIGHT, TOP); // align text to top-right corner
-
-    // create date string in format YYYY-MM-DD HH:MM:SS
-    let dateStr = nf(year(), 4) + '-' + nf(month(), 2) + '-' + nf(day(), 2) + ' ' + nf(hour(), 2) + ':' + nf(minute(), 2) + ':' + nf(second(), 2);
-
-    // draw text with 5px margin from edges
-    text(dateStr, cellW*3 - 5, 5);
-    pop();
+    applyThresholdCSImages();
+    image(thrHSVImg, cellW, cellH*4, cellW, cellH);
+    image(thrLabImg, cellW*2, cellH*4, cellW, cellH);
   }
 }
 
@@ -141,6 +135,7 @@ function drawGridPlaceholders() {
   textAlign(CENTER, CENTER)
   textSize(10)
 
+  // labels for each cell
   let labels = [
     ["Webcam image", "Grayscale + Brightness +20%", "VHS Effect"],
     ["Red channel", "Green channel", "Blue channel"],
@@ -149,6 +144,7 @@ function drawGridPlaceholders() {
     ["Face detection", "Thresh (CS1)", "Thresh (CS2)"]
   ]
 
+  // draws grid
   for (let row = 0; row < 5; row++) {
     for (let col = 0; col < 3; col++) {
       let x = col * cellW
@@ -166,25 +162,31 @@ function drawGridPlaceholders() {
 // takes snapshot with spacebar and creates the different images
 function keyPressed() {
   if(key===' '){
-    takeSnapshot()    
+    takeSnapshot()
+
     // creates grayscale + brightness image
     grayBrightImg = createGrayscaleFromSnapshot();
+
     // creates RGB channel images
     createRGBChannelsFromSnapshot()
+
     // creates threshold images
     thrRedImg   = createChannelImage(snapshot, "r", threshR.value());
     thrGreenImg = createChannelImage(snapshot, "g", threshG.value());
     thrBlueImg  = createChannelImage(snapshot, "b", threshB.value());
+    
+    // creates color space conversion images
     createHSVImage()
     createLabImage()
     createThresholdCSImages()
   }
-  if (key === '0') faceMode = 0
-  if (key === '1') faceMode = 1
-  if (key === '2') faceMode = 2
-  if (key === '3') faceMode = 3
-  if (key === '4') faceMode = 4
-  if (key === '5') faceMode = 5
+  // face modes 0-5
+  if (key === '0') faceMode = 0 // no effect
+  if (key === '1') faceMode = 1 // grayscale
+  if (key === '2') faceMode = 2 // blur
+  if (key === '3') faceMode = 3 // HSV
+  if (key === '4') faceMode = 4 // pixelate (grayscale)
+  if (key === '5') faceMode = 5 // pixelate (color)
 }
 
 function takeSnapshot() {
@@ -203,14 +205,18 @@ function takeSnapshot() {
 // GRAYSCALE + BRIGHTNESS +20% //
 //////////////////////////////////////////////
 function createGrayscaleFromSnapshot() {
+
+  // creates new image
   let img = createImage(cellW, cellH);
   let applyBrightness = true;
+
+  // copies snapshot to img and applies grayscale + brightness
   img.copy(snapshot, 0, 0, snapshot.width, snapshot.height, 0, 0, cellW, cellH);
   applyGrayscale(img, applyBrightness);
   return img;
 }
 
-function applyGrayscale(img, applyBrightness) {2
+function applyGrayscale(img, applyBrightness) {
   img.loadPixels()
   // runs through the array in one single loop following the 4-value-pixel rule (and skipping alpha)
   for (let i = 0; i < img.pixels.length; i += 4) {
@@ -399,9 +405,10 @@ function createThresholdCSImages() {
 
 function applyThreshold(imgSrc, imgDst, channelIdx, threshold) {
   imgDst.loadPixels();
-  imgSrc.loadPixels(); // ensure source image pixels are loaded
+  imgSrc.loadPixels(); // ensures source image pixels are loaded
 
   for (let i = 0; i < imgSrc.pixels.length; i += 4) {
+    // gets the value of the selected channel
     let value = imgSrc.pixels[i + channelIdx];
     let a = imgSrc.pixels[i + 3];
 
@@ -429,46 +436,63 @@ function applyThresholdCSImages() {
 //////////////////////////////////////////////
 // FACE DETECTION + FILTERS //
 //////////////////////////////////////////////
-function createFaceDetection() {
-  if(webcam){
-    // copies webcam frame to faceImg and loads its pixels
-    faceImg.copy(webcam, 0, 0, webcam.width, webcam.height, 0, 0, cellW, cellH)
-    faceImg.loadPixels()
 
-    // applies face detection on the frame
-    faces = detector.detect(faceImg.canvas)
+// array of detected faces
+const faceEffects = {
+  1: img => applyGrayscale(img, false),
+  2: img => applyBlur(img),
+  3: img => applyHSV(img),
+  4: img => applyPixelate(img, 5, false),
+  5: img => applyPixelate(img, 5, true),
+};
 
-    // draws the resized webcam frame in its cell
-    image(faceImg, 0, cellH*4, cellW, cellH)
-  
-    stroke(255, 255, 255)
-    strokeWeight(2)
-    noFill()
-    for(let i=0; i<faces.length; i++){
-      let face = faces[i]      
-      // draws rectangle around detected face if confidence > threshold
-      if(face[4] > 4) {
-        rect(face[0], face[1] + cellH*4, face[2], face[3])
+function applyFaceEffect(img, mode) {
+  if (faceEffects[mode]) faceEffects[mode](img); // applies effect if mode is valid
+}
 
-        // face crop image section
-        let faceCrop = faceImg.get(face[0], face[1], face[2], face[3])
+function processFace(faceImg, faceBox, mode, offsetY = 0) {
+  let [x, y, w, h] = faceBox;
+  let crop = faceImg.get(x, y, w, h);   // crops face
+  applyFaceEffect(crop, mode);          // applies effect
+  image(crop, x, y + offsetY);          // draws processed face
+}
 
-        // 4 modes of face detection
-        if (faceMode === 1) applyGrayscale(faceCrop, false)
-        else if (faceMode === 2) applyBlur(faceCrop)
-        else if (faceMode === 3) applyHSV(faceCrop)
-        else if (faceMode === 4) applyPixelate(faceCrop, 5, false)
-        else if (faceMode === 5) applyPixelate(faceCrop, 5, true)
+function detectFaces(img) {
+  if (!detector) return [];
+  let faces = detector.detect(img.canvas);  // detect faces
+  return faces.filter(f => f[4] > 4);       // filter by confidence threshold
+}
 
-        image(faceCrop, face[0], face[1] + cellH * 4)
-      }
-    }
+function drawFaces(faceImg, faces, mode, offsetY = 0) {
+  stroke(255);
+  strokeWeight(2);
+  noFill();
+
+  // draws rectangles and process each face
+  for (let face of faces) {
+    rect(face[0], face[1] + offsetY, face[2], face[3]);
+    processFace(faceImg, face, mode, offsetY);
   }
+}
+
+function createFaceDetection() {
+  if (!webcam) return;
+
+  // copies webcam image to faceImg and loads its pixels
+  faceImg.copy(webcam, 0, 0, webcam.width, webcam.height, 0, 0, cellW, cellH);
+  faceImg.loadPixels();
+
+  // draws the image of the frame
+  image(faceImg, 0, cellH*4, cellW, cellH);
+
+  // detects and draws faces with the selected effect
+  let faces = detectFaces(faceImg);
+  drawFaces(faceImg, faces, faceMode, cellH*4);
 }
 
 function applyBlur(img) {
 
-  factor = 8
+  const factor = 8
   // creates a new image with dimensions reduced to 1/8 of the original size
   let small = createImage(int(img.width / factor), int(img.height / factor))
   
@@ -602,113 +626,119 @@ function applyHSV(img) {
   img.copy(tempImg, 0, 0, tempImg.width, tempImg.height, 0, 0, img.width, img.height);
 }
 
-function applyVHSEffect(img) {
-  img.loadPixels();
+/////////////////////////////////
+// VHS EFFECT //
+/////////////////////////////////
 
-  // converts from RGB to HSV
-  for (let y = 0; y < img.height; y++) {
-    for (let x = 0; x < img.width; x++) {
-      let idx = (y * img.width + x) * 4;
+function vhsEffect(img) {
+  let processed = img.get();  // copies image
 
-      let r = img.pixels[idx] / 255;
-      let g = img.pixels[idx + 1] / 255;
-      let b = img.pixels[idx + 2] / 255;
+  chromaticShift(processed);  // chromatic shift (R/B channels)
+  scanlinesNoise(processed);  // adds scanlines + white noise
 
-      let max = Math.max(r, g, b);
-      let min = Math.min(r, g, b);
-      let delta = max - min;
+  return processed;
+}
 
-      let H = 0;
-      if (delta !== 0) {
-        if (max === r) H = ((g - b) / delta) % 6;
-        else if (max === g) H = (b - r) / delta + 2;
-        else H = (r - g) / delta + 4;
-        H *= 60;
-        if (H < 0) H += 360;
-      }
+function displayVHSEffect() {
 
-      let S = max === 0 ? 0 : delta / max;
-      let V = max;
+  // applies VHS effect to webcam image
+  vhsImg = webcam.get();
+  vhsImg.resize(cellW, cellH);
+  vhsImg = vhsEffect(vhsImg);
+  image(vhsImg, cellW*2, 0, cellW, cellH);
 
-      // VHS adjustments (TODO: avoid magic numbers)
-      H += random([-3, 3]);     // small displacement of hue
-      S *= 0.75;                // reduced saturation
-      V *= random(0.90, 1.10);  // random brightness variation
+  // draws date and time
+  drawVHSDate();
+}
 
-      // from HSV to RGB for visualization
-      let C = V * S;
-      let X = C * (1 - abs((H / 60) % 2 - 1));
-      let m = V - C;
+function drawVHSDate() {
 
-      let r1, g1, b1;
-      if (H < 60) [r1, g1, b1] = [C, X, 0];
-      else if (H < 120) [r1, g1, b1] = [X, C, 0];
-      else if (H < 180) [r1, g1, b1] = [0, C, X];
-      else if (H < 240) [r1, g1, b1] = [0, X, C];
-      else if (H < 300) [r1, g1, b1] = [X, 0, C];
-      else [r1, g1, b1] = [C, 0, X];
+  // draws date and time in the top-right corner of the VHS image
+  push();
+  textFont(vhsFont);
+  textSize(12);
+  fill(255);
+  stroke(0);
+  strokeWeight(1);
+  textAlign(RIGHT, TOP);
 
-      r = (r1 + m) * 255 + random(-15, 15);
-      g = (g1 + m) * 255 + random(-15, 15);
-      b = (b1 + m) * 255 + random(-15, 15);
+  // formats date and time as YYYY-MM-DD HH:MM:SS
+  let dateStr = nf(year(), 4) + '-' + nf(month(), 2) + '-' + nf(day(), 2) + ' ' + nf(hour(), 2) + ':' + nf(minute(), 2) + ':' + nf(second(), 2);
 
-      img.pixels[idx]     = constrain(r, 0, 255);
-      img.pixels[idx + 1] = constrain(g, 0, 255);
-      img.pixels[idx + 2] = constrain(b, 0, 255);
-    }
-  }
-  img.updatePixels();
+  // draws the date string with a small margin
+  text(dateStr, cellW*3 - 5, 5);
+  pop();
+}
 
-  // chromatic shift
+// Chromatic shift (R/B channels)
+function chromaticShift(img) {
+
+  // creates a copy of the image to store shifted values
   let shifted = createImage(img.width, img.height);
   shifted.copy(img, 0, 0, img.width, img.height, 0, 0, img.width, img.height);
   shifted.loadPixels();
+  img.loadPixels();
 
+  // shifts red channel to the right and blue channel to the left
+  let shift = 2;
   for (let y = 0; y < img.height; y++) {
     for (let x = 0; x < img.width; x++) {
-      let idx = (y * img.width + x) * 4;
-      let shift = 2;
+      let idx = (y * img.width + x) * 4;                // index of the pixel
+      let xR = constrain(x + shift, 0, img.width - 1);  // shifted x for red channel
+      let xB = constrain(x - shift, 0, img.width - 1);  // shifted x for blue channel
 
-      let xR = constrain(x + shift, 0, img.width - 1);
-      let idxR = (y * img.width + xR) * 4;
-
-      let xB = constrain(x - shift, 0, img.width - 1);
-      let idxB = (y * img.width + xB) * 4;
-
-      shifted.pixels[idx]     = img.pixels[idxR];
-      shifted.pixels[idx + 1] = img.pixels[idx + 1];
-      shifted.pixels[idx + 2] = img.pixels[idxB + 2];
+      shifted.pixels[idx]     = img.pixels[(y * img.width + xR) * 4];     // red
+      shifted.pixels[idx + 1] = img.pixels[idx + 1];                      // green
+      shifted.pixels[idx + 2] = img.pixels[(y * img.width + xB) * 4 + 2]; // blue
+      shifted.pixels[idx + 3] = img.pixels[idx + 3];                      // alpha
     }
   }
 
-  // scanlines and white noise for VHS effect
-  for (let y = 0; y < shifted.height; y++) {
-    // horizonttal lines
+  // updates pixels and copies back to original image
+  shifted.updatePixels();
+  img.copy(shifted, 0, 0, img.width, img.height, 0, 0, img.width, img.height);
+}
+
+// Adds scanlines + white noise
+function scanlinesNoise(img) {
+  img.loadPixels();
+
+  // iterates over each row
+  for (let y = 0; y < img.height; y++) {
+
+    // darkens every other line to create scanline effect
     if (y % 2 === 0) {
-      for (let x = 0; x < shifted.width; x++) {
-        let idx = (y * shifted.width + x) * 4;
-        shifted.pixels[idx]     *= 0.7;
-        shifted.pixels[idx + 1] *= 0.7;
-        shifted.pixels[idx + 2] *= 0.7;
+      // darkens the line by reducing RGB values by 30%
+      for (let x = 0; x < img.width; x++) {
+        let idx = (y * img.width + x) * 4;
+        img.pixels[idx]     *= 0.7;
+        img.pixels[idx + 1] *= 0.7;
+        img.pixels[idx + 2] *= 0.7;
       }
     }
 
-    // small random white noise bands
+    // adds white noise randomly on some lines
     if (random() < 0.01) {
+
+      // creates a band of 1 to 3 lines with white noise
       let bandHeight = int(random(1, 3));
+
+      // applies white noise to the band
       for (let by = 0; by < bandHeight; by++) {
-        let yy = constrain(y + by, 0, shifted.height - 1);
-        for (let x = 0; x < shifted.width; x++) {
-          let idx = (yy * shifted.width + x) * 4;
+
+        // ensures we don't go out of image bounds
+        let yy = constrain(y + by, 0, img.height - 1);
+
+        // applies white noise to the entire line
+        for (let x = 0; x < img.width; x++) {
+          let idx = (yy * img.width + x) * 4;
           let whiteNoise = random(150, 255);
-          shifted.pixels[idx]     = whiteNoise;
-          shifted.pixels[idx + 1] = whiteNoise;
-          shifted.pixels[idx + 2] = whiteNoise;
+
+          // sets R, G, B channels to white noise value
+          img.pixels[idx] = img.pixels[idx + 1] = img.pixels[idx + 2] = whiteNoise;
         }
       }
     }
   }
-
-  shifted.updatePixels();
-  return shifted;
+  img.updatePixels();
 }
